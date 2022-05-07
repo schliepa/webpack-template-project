@@ -94,6 +94,9 @@ module.exports = (env, argv) => ({
 		filename: "[name].js",
 		path: path.resolve(__dirname, "dist"),
 		clean: true,
+		library: {
+			type: 'umd' // window = Classical JS library which is attached to window. umd = all-in-one option
+		}
 	},
 	optimization: env.production ? {
 		minimize: true,   // TerserPlugin only works with a limited set of devtool settings such as 'source-map'. 'eval' isn't supported.
