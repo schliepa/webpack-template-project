@@ -70,8 +70,7 @@ module.exports = (env, argv) => ({
 						}
 					}
 				]
-			},
-			{
+			}, {
 				// Don't let Babel transpile since babel doesn't use the tsconfig.json and doesn't do type checking.
 				test: /\.tsx?$/,
 				use: [{
@@ -82,6 +81,9 @@ module.exports = (env, argv) => ({
 					}
 				}],
 				exclude: /node_modules/,
+			}, {
+				test: /\.html$/i,
+				loader: "html-loader"
 			}
 
 		], // do not forget to change/install your own TS loader
