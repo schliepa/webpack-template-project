@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"module": "es2020",
 		"target": "es2020",
-		"moduleResolution": "node16",
+		"moduleResolution": "node",
 		"sourceMap": true,
 		"incremental": true,
 		"strict": true,
