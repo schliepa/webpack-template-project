@@ -40,35 +40,41 @@ class WebpackDeclarationsIndexer {
 			// <string, string[]>
 			const bundles = new Map();
 
-			compilation.hooks.chunkAsset.tap(pluginName, (chunk, filename) => {
-				// console.log(`WebpackDeclarationsIndexer() Chunk ${filename}`, chunk.name);
-				const bundledFiles = [];
+			// chunkAsset hook is executed too late as the modules may already be "optimized out" in release builds.
+			// afterChunks on the other hand works for all builds.
+			compilation.hooks.afterChunks.tap(pluginName, (chunks) => {
+				for (const chunk of chunks) {
+					// console.log(`WebpackDeclarationsIndexer() Chunk ${chunk.name}`);
+					const bundledFiles = [];
 
-				// Explore each module within the chunk (built inputs):
-				// Warning: .chunks and .getModules is deprecated in favor of the ChunkGraph and ModuleGraph APIs, which aren't documented and aren't intuitive for beginners.
-				// For this reason we still use the deprecated APIs.
-				// https://webpack.js.org/blog/2020-10-10-webpack-5-release/#module-and-chunk-graph
-				chunk.getModules().forEach((module) => {
+					// Explore each module within the chunk (built inputs):
+					// Warning: .chunks and .getModules is deprecated in favor of the ChunkGraph and ModuleGraph APIs, which aren't documented and aren't intuitive for beginners.
+					// For this reason we still use the deprecated APIs.
+					// https://webpack.js.org/blog/2020-10-10-webpack-5-release/#module-and-chunk-graph
+					chunk.getModules().forEach((module) => {
 
-					// module.type === "javascript/auto" AKA NormalModule contains resourceResolveData
-					if (module.resourceResolveData) {
+						// module.type === "javascript/auto" AKA NormalModule contains resourceResolveData
+						if (module.resourceResolveData) {
+							// console.log(`WebpackDeclarationsIndexer() chunk ${chunk.name}: ${module.resourceResolveData.relativePath}`);
 
-						// console.log(`WebpackDeclarationsIndexer() chunk ${chunk.name}:`, module.resourceResolveData.relativePath);
-
-						// tsf is the relative path to a .ts source file. It is assumed there exists a .d.ts file for this .ts file.
-						// Since tsf lacks path information to the .d.ts file we need to look that up in the processAssets stage.
-						// Output path involves tsconfig.json declarationDir and to a lesser degree output.path.
-						const tsf = module.resourceResolveData.relativePath;
-						if (tsf.endsWith(".ts")) {
-							bundledFiles.push(tsf);
+							// tsf is the relative path to a .ts source file. It is assumed there exists a .d.ts file for this .ts file.
+							// Since tsf lacks path information to the .d.ts file we need to look that up in the processAssets stage.
+							// Output path involves tsconfig.json declarationDir and to a lesser degree output.path.
+							const tsf = module.resourceResolveData.relativePath;
+							if (tsf.endsWith(".ts")) {
+								bundledFiles.push(tsf);
+							}
+						} else {
+							// "javascript/esm". Optimized chunks such as in the chunkAsset hook may end up here, where we are unable to identify the modules.
+							// console.log(`WebpackDeclarationsIndexer() chunk ${chunk.name} module type:`, module.type);
 						}
-					}
-				});
+					});
 
-				if (bundledFiles.length > 0) {
-					bundles.set(chunk.name, bundledFiles)
+					if (bundledFiles.length > 0) {
+						bundles.set(chunk.name, bundledFiles)
+					}
 				}
-			})
+			});
 
 			// Tapping to the assets processing pipeline on a specific stage.
 			compilation.hooks.processAssets.tap(
