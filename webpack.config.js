@@ -11,6 +11,113 @@ import TerserPlugin from "terser-webpack-plugin";
 // const VERSION = require("./package.json").version;
 import PACKAGE from "./package.json" assert {type: "json"};
 
+
+/**
+ * Webpack plugin which iterates through emitted .d.ts files and creates index files for them corresponding to the entry and output declarations.
+ * What that means in essence is, that it adds proper type support for the bundled libs.
+ */
+class WebpackDeclarationsIndexer {
+	// implements WebpackPluginInstance
+	// Define `apply` as its prototype method which is supplied with compiler as its argument
+	apply(compiler) {
+		const pluginName = "WebpackDeclarationsIndexer";
+
+		// webpack module instance can be accessed from the compiler object,
+		// this ensures that correct version of the module is used
+		// (do not require/import the webpack or any symbols from it directly).
+		const { webpack } = compiler;
+
+		// Compilation object gives us reference to some useful constants.
+		const { Compilation } = webpack;
+
+		// RawSource is one of the "sources" classes that should be used
+		// to represent asset sources in compilation.
+		const { RawSource } = webpack.sources;
+
+		// Tapping to the "thisCompilation" hook in order to further tap to the compilation process on an earlier stage.
+		compiler.hooks.thisCompilation.tap(pluginName, (compilation) => {
+			// Map of new chunk based .d.ts files consisting of chunk name and a list of bundled .ts files in that chunk.
+			// <string, string[]>
+			const bundles = new Map();
+
+			compilation.hooks.chunkAsset.tap(pluginName, (chunk, filename) => {
+				// console.log(`WebpackDeclarationsIndexer() Chunk ${filename}`, chunk.name);
+				const bundledFiles = [];
+
+				// Explore each module within the chunk (built inputs):
+				// Warning: .chunks and .getModules is deprecated in favor of the ChunkGraph and ModuleGraph APIs, which aren't documented and aren't intuitive for beginners.
+				// For this reason we still use the deprecated APIs.
+				// https://webpack.js.org/blog/2020-10-10-webpack-5-release/#module-and-chunk-graph
+				chunk.getModules().forEach((module) => {
+
+					// module.type === "javascript/auto" AKA NormalModule contains resourceResolveData
+					if (module.resourceResolveData) {
+
+						// console.log(`WebpackDeclarationsIndexer() chunk ${chunk.name}:`, module.resourceResolveData.relativePath);
+
+						// tsf is the relative path to a .ts source file. It is assumed there exists a .d.ts file for this .ts file.
+						// Since tsf lacks path information to the .d.ts file we need to look that up in the processAssets stage.
+						// Output path involves tsconfig.json declarationDir and to a lesser degree output.path.
+						const tsf = module.resourceResolveData.relativePath;
+						if (tsf.endsWith(".ts")) {
+							bundledFiles.push(tsf);
+						}
+					}
+				});
+
+				if (bundledFiles.length > 0) {
+					bundles.set(chunk.name, bundledFiles)
+				}
+			})
+
+			// Tapping to the assets processing pipeline on a specific stage.
+			compilation.hooks.processAssets.tap(
+				{
+					name: pluginName,
+
+					// Using one of the later asset processing stages to ensure
+					// that all assets were already added to the compilation by other plugins.
+					stage: Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE,
+				},
+				(assets) => {
+					// "assets" is an object that contains all assets
+					// in the compilation, the keys of the object are pathnames of the assets
+					// and the values are file sources.
+
+					// Get a map of all .d.ts files which will be emitted.
+					// <string, string>
+					const declarationFileNames = new Map();
+					for (const filename of Object.keys(assets)) {
+						if (filename.endsWith('.d.ts')) {
+							declarationFileNames.set(filename.substring(filename.lastIndexOf("/") + 1), filename);
+						}
+					}
+
+					// console.log("WebpackDeclarationsIndexer() going to index declarations: ", [...declarationFileNames.keys()]);
+
+					bundles.forEach((tsFiles, name) => {
+						let aggregated = "";
+
+						for (const tsf of tsFiles) {
+							const dts = tsf.slice(tsf.lastIndexOf("/") + 1, -2) + "d.ts";
+							const dfs = declarationFileNames.get(dts);
+							if (dfs) {
+								// Append a new export from the .d.ts file.
+								aggregated += `export * from "./${dfs.slice(0, -5)}";\n`
+							}
+						}
+
+						if (aggregated.length > 0) {
+							compilation.emitAsset(`${name}.d.ts`, new RawSource(aggregated));
+						}
+					})
+				}
+			);
+		});
+	}
+}
+
+
 /**
  * Shared generic build config.
  *
@@ -58,7 +165,8 @@ export default (env, argv) => {
 			// This can be achieved either by the use of JSON.stringify() here or by using it like this: "__VERSION__" in the code.
 			new Webpack.DefinePlugin({
 				__VERSION__: JSON.stringify(PACKAGE.version)
-			})
+			}),
+			new WebpackDeclarationsIndexer()
 		];
 
 		// Only add the Notifier plugin in watcher mode.
@@ -163,6 +271,9 @@ export default (env, argv) => {
 			library: {
 				type: 'umd' // window = Classical JS library which is attached to window. umd = all-in-one option
 			}
+		},
+		externals: {
+			// List here packages in a [name]: [name] notation which should not be bundled. See package.json "dependencies".
 		},
 		optimization: env.production ? {
 			minimize: true,   // TerserPlugin only works with a limited set of devtool settings such as 'source-map'. 'eval' isn't supported.
