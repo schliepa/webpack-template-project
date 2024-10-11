@@ -1,4 +1,5 @@
 # Generic Webpack NPM Project
+
 This is a project template / boilerplate for a fairly generic Webpack built NPM project.
 The build configs are set up for the most common use cases while still offering support for fairly complex projects.
 
@@ -6,6 +7,7 @@ While this setup would likely be overkill for the most simple of projects, those
 Therefore, starting right is always recommended.
 
 ## Features
+
 - Full TypeScript support (ts-loader).
 - Babel build (babel-loader).
 - Ifdef support via comments (ifdef-loader)
@@ -18,21 +20,27 @@ Therefore, starting right is always recommended.
 
 
 ## Installation
+
 1. Clone the repo and start your own:
+
 ```
-git clone git@gist.github.com:3c83db422f03ef66ea36.git
+git clone git@...
 rm -rf .git
 git init
 ```
+
 2. Install dependencies:
+
 ```
 npm install
 ```
 
 ## Building
+
 - For development: ```npm run start```
 - For production: ```npm run build```
 
 ## Development
+
 Place source code into ./src/ and whatever other folders you need. Build output is going into ./dist/.
 Adjust webpack.config.js as required
