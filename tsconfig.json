@@ -20,8 +20,10 @@
 		"allowUnusedLabels": false,
 		"allowUnreachableCode": false,
 		"forceConsistentCasingInFileNames": true,
+		"types": [],
 		"lib": [
-			"dom"
+			"DOM",
+			"ES2020"
 		]
 	},
 	"exclude": [

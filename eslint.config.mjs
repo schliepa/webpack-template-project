@@ -96,8 +96,8 @@ export default tseslint.config(
 			}],
 			"@stylistic/padding-line-between-statements": [
 				"error",
-				{ "blankLine": "always", "prev": "*", "next": ["class", "function", "interface", "type", "try", "block"] },   // Blank lines before class, function and try.
-				{ "blankLine": "always", "prev": ["class", "function", "interface", "type", "try", "block"], "next": "*" },   // Blank lines after class, function and try.
+				{ "blankLine": "always", "prev": "*", "next": ["class", "function", "interface", "type", "enum", "try", "block"] },   // Blank lines before class, function and try.
+				{ "blankLine": "always", "prev": ["class", "function", "interface", "type", "enum", "try", "block"], "next": "*" },   // Blank lines after class, function and try.
 				{ "blankLine": "always", "prev": "*", "next": ["if", "switch", "for", "while", "return"] },   // Blank lines before block statements unless they are nested.
 				{ "blankLine": "always", "prev": ["if", "switch", "for", "while"], "next": "*"  },   // Blank lines after block statements unless they are nested.
 				{ "blankLine": "any", "prev": ["if", "switch", "for", "while"], "next": ["if", "switch", "for", "while", "break"] }, // Exceptions to the previous rule.
@@ -199,7 +199,7 @@ export default tseslint.config(
 			"@typescript-eslint/no-inferrable-types": "off",	// Irrelevant?
 			"@typescript-eslint/no-non-null-assertion": "off",	// We allow this one due to JS to TS interop reasons.
 			"no-unused-vars": "off",
-			"@typescript-eslint/no-unused-vars": ["warn", {args: "after-used", argsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_"}],	// Might want to configure { "args": "none" } as it could be useful for callbacks.
+			"@typescript-eslint/no-unused-vars": ["warn", {args: "after-used", argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_"}],	// Might want to configure { "args": "none" } as it could be useful for callbacks.
 
 			// As seen in plugin:@typescript-eslint/strict
 			"@typescript-eslint/array-type": "error",
